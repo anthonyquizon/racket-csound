@@ -2,7 +2,6 @@
 
 (require "ffi.rkt")
 
-
 (csound-initialize 3)
 
 (define orc #<<EOF
@@ -18,7 +17,6 @@ endin
 EOF
 )
 
-
 ; Defining our Csound SCO code 
 (define sco "i1 0 1")
 
@@ -31,6 +29,9 @@ EOF
   (csound-read-score cs sco)      ; Compile the Csound SCO String 
   (csound-start cs)               ; When compiling from strings, this call is necessary before doing any performing 
   (csound-perform cs)            ; This call runs Csound to completion
-  (csound-stop cs))              ; At this point, Csound is already stopped, but this call is here
-                                 ; as it is something that you would generally call in real-world 
-                                 ; contexts 
+  (csound-stop cs)
+  
+  (csound-destroy cs))
+
+
+
