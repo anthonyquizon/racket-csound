@@ -1,42 +1,19 @@
-#lang racket/base
+#lang racket
 
-(require "csound/core.rkt")
+(require (prefix-in f: "private/ffi.rkt"))
 
-(define orc #<<EOF
-sr = 44100
-ksmps = 32
-nchnls = 2
-0dbfs  = 1
+(provide run)
 
-instr 1
+(define (run orc sco)
+  ;;TODO render
+  (define cs (f:csound-create))
 
-kamp = .6
-kcps = 440
-ifn  = p4
-
-asig oscil kamp, kcps, ifn
-     outs asig,asig
-
-endin
-EOF
-)
-
-(define sco #<<EOF 
-f1 0 16384 10 1                                          ; Sine
-f2 0 16384 10 1 0.5 0.3 0.25 0.2 0.167 0.14 0.125 .111   ; Sawtooth
-f3 0 16384 10 1 0   0.3 0    0.2 0     0.14 0     .111   ; Square
-f4 0 16384 10 1 1   1   1    0.7 0.5   0.3  0.1          ; Pulse
-
-i 1 0 2 1
-i 1 3 2 2
-i 1 6 2 3
-i 1 9 2 4
-
-e
-EOF 
-)
-
-(define (run!)
- (run orc sco))
-
+  (f:csound-initialize 3)
+  (f:csound-set-option cs "-odac") 
+  (f:csound-compile-orc cs orc)
+  (f:csound-read-score cs sco)      
+  (f:csound-start cs)             
+  (f:csound-perform cs)          
+  (f:csound-stop cs)
+  (f:csound-destroy cs))
 
