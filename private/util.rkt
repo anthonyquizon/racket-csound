@@ -4,18 +4,7 @@
          racket/format 
          threading)
 
-(provide iterate-signal
-         iterate-score)
+(provide empty-env)
 
-(define (iterate-signal sig initial fn)
-  (define args (s:Signal-args sig))
+(define empty-env (make-immutable-hash '()))
 
-  (for/fold ([acc initial]) ([arg args])
-    (cond
-      [(s:Signal? arg) (fn arg acc)]
-      [else acc])))
-
-(define (iterate-score sco initial fn)
-  (define ops (s:Score-ops sco))
-
-  (for/fold ([acc initial]) ([op ops]) (fn op acc)))
