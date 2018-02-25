@@ -10,29 +10,6 @@
 (module+ test
   (require rackunit))
 
-(define (render-audio-var id)
-  (format "a~a" id))
-
-(define (render-control-var id)
-  (format "k~a" id))
-
-(define (render-signal-id sig env)
-  ;;TODO check if control or audio
-  (~> (hash-ref env sig) render-audio-var))
-
-(define (render-signal-args sig env)
-  ;;TODO audio ids
-  (~> (s:Signal-args sig) 
-      (map ~a _)
-      (string-join _ ", ")))
-
-(define ((render-signal env) sig acc)
-  (define op (s:Signal-op sig))
-  (define id (render-signal-id sig env))
-  (define args (render-signal-args sig env))
-  (define sig-str (format "~a ~a ~a" id op args))
-  (displayln sig-str)
-  (format "~a ~a\n" acc sig-str))
 
 (define (render-instr sig env)
   (define id (hash-ref env sig))
@@ -50,6 +27,12 @@
     [(s:Note sig _start _duration _params) (render-instr sig env)]
     [_ acc]))
 
+
+(define ((op->render-score-op env) op acc)
+  (match op
+    [(s:Note sig _start _duration _params) (render-instr sig env)]
+    [_ acc]))
+
 (define (render-assign k v)
   (format "~a = ~a" k v))
 
@@ -62,7 +45,9 @@
   (define header (render-header c:header-defaults))
   (format "~a \n ~a" header instrs)) 
 
-(define (render-score sco env) "")
+(define (render-score sco env) 
+  (define ops (s:iterate/fold (op->render-score-op env) "" sco))
+  (format "~a \n e" ops))
 
 (define (render sco)
   (define env (p:parse-score sco))

@@ -1,7 +1,6 @@
 #lang racket
 
-(require (prefix-in s: "./struct.rkt")
-         racket/format 
+(require racket/format 
          threading)
 
 (provide empty-env)

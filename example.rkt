@@ -1,16 +1,12 @@
 #lang racket
 
-(require "./private/constructor.rkt")
+(require "./private/signal.rkt"
+         "./private/score.rkt"
+         "./private/note.rkt")
 
-
-(define c
-  (oscils b))
-
-(define b
-  (oscils c))
 
 (define a 
-  (oscils 10000 440))
+  (sine 0.5 440))
 
 (define sco
   (score 
