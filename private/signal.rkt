@@ -1,7 +1,7 @@
 #lang racket
 
 (require (prefix-in g: "generics.rkt")
-         (prefix-in u: "util.rkt")
+         "env.rkt"
          racket/match
          threading)
 
@@ -33,20 +33,16 @@
       [else acc])))
 
 (define (signal-parse sig env) 
-  (cond 
-    [(hash-ref env sig #f) env]  
-    [else 
-      (define id (hash-count env))     
-      (define env^ (hash-set env sig id))
-      (g:iterate/fold signal-parse env^ sig)]))
+  (define (fn env^)
+    (g:iterate/fold signal-parse env^ sig))
 
-;;TODO render instr
-;;      check if instr already rendered
+  (store sig sigs env fn))
 
 (define (signal-render sig env)
+  (define sig-env (Env-sigs env))
   (define op (Signal-op sig))
-  (define id (render-signal-id sig env 'audio))
-  (define args (render-signal-args sig env))
+  (define id (render-signal-id sig sig-env 'audio))
+  (define args (render-signal-args sig sig-env))
 
   (format "~a ~a ~a" id op args))
 
@@ -67,16 +63,18 @@
   (define b (sine 0.2 10))
   (define a (sine 0.5 b))
 
+  (define env (g:parse a empty-env))
+
   (check-equal?
-    (g:parse a u:empty-env)
+    (Env-sigs env)
     (make-immutable-hash `((,a . 0) (,b . 1))))
 
   (check-equal?
-    (g:render a (g:parse a u:empty-env))
+    (g:render a env)
     "a0 oscils 0.5, k1")
 
   (check-equal?
-    (g:render b (g:parse a u:empty-env))
+    (g:render b env)
     "a1 oscils 0.2, 10"))
 
 
