@@ -32,16 +32,13 @@
       [(Signal? arg) (fn arg acc)]
       [else acc])))
 
-(define (store-signal sig env) 
+(define (signal-parse sig env) 
   (cond 
     [(hash-ref env sig #f) env]  
     [else 
       (define id (hash-count env))     
-      (hash-set env sig id)]))
-
-(define (signal-parse sig env) 
-  (define env^ (store-signal sig env))
-  (g:iterate/fold store-signal env^ sig))
+      (define env^ (hash-set env sig id))
+      (g:iterate/fold signal-parse env^ sig)]))
 
 ;;TODO render instr
 ;;      check if instr already rendered
@@ -70,14 +67,16 @@
   (define b (sine 0.2 10))
   (define a (sine 0.5 b))
 
-  (define env (g:parse a u:empty-env))
-  (define out (g:render a env))
+  (check-equal?
+    (g:parse a u:empty-env)
+    (make-immutable-hash `((,a . 0) (,b . 1))))
 
-  ;(check 
-    ;(g:parse a)
-    ;#hash((j))
-    ;)
+  (check-equal?
+    (g:render a (g:parse a u:empty-env))
+    "a0 oscils 0.5, k1")
 
-  )
+  (check-equal?
+    (g:render b (g:parse a u:empty-env))
+    "a1 oscils 0.2, 10"))
 
 

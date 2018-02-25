@@ -8,7 +8,9 @@
 
 (define (note-parse note env)
   (define sig (Note-sig note))
-  (g:parse sig))
+  (define instr (Instrument sig))
+
+  (g:parse instr env))
 
 (define (note-render note env) null)
 
