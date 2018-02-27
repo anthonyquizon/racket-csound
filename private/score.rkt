@@ -15,7 +15,10 @@
 (define (score-parse sco env)
   (g:iterate/fold g:parse u:empty-env sco))
 
-(define (score-render sco env) null)
+(define (score-render sco env) 
+  ;;render instrs
+  ;;render notes
+  null)
 
 (define (score . ops) (Score ops))
 

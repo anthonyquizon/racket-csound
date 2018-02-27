@@ -27,7 +27,6 @@
     [(s:Note sig _start _duration _params) (render-instr sig env)]
     [_ acc]))
 
-
 (define ((op->render-score-op env) op acc)
   (match op
     [(s:Note sig _start _duration _params) (render-instr sig env)]

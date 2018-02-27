@@ -2,6 +2,7 @@
 
 (require (prefix-in g: "generics.rkt")
          "env.rkt"
+         "util.rkt"
          racket/match
          threading)
 
@@ -13,16 +14,6 @@
   (cond
     [(equal? type 'audio) (format "a~a" id)]
     [(equal? type 'control) (format "k~a" id)]))
-
-(define (render-signal-args sig env)
-  (define (f x)
-   (cond
-    [(Signal? x) (render-signal-id x env 'control)]
-    [else (~a x)]))
-  
-  (~> (Signal-args sig) 
-      (map f _)
-      (string-join _ ", ")))
 
 (define (signal-iterate/fold fn initial sig)
   (define args (Signal-args sig))
@@ -38,13 +29,28 @@
 
   (store sig sigs env fn))
 
-(define (signal-render sig env)
+;; TODO if adding signals together -> use audio rate
+(define (render-signal-args sig env)
+  (define (f x)
+   (cond
+    [(Signal? x) (render-signal-id x env 'control)]
+    [else (~a x)]))
+  
+  (~> (Signal-args sig) 
+      (map f _)
+      (string-join _ ", ")))
+
+(define (signal-render sig env [type 'audio])
   (define sig-env (Env-sigs env))
   (define op (Signal-op sig))
   (define id (render-signal-id sig sig-env 'audio))
   (define args (render-signal-args sig sig-env))
 
-  (format "~a ~a ~a" id op args))
+  (cond )
+
+  (format "~a ~a ~a" id op args)
+  
+  )
 
 (define (sine amp freq)
   (Signal 'oscils `(,amp ,freq)))
@@ -71,10 +77,13 @@
 
   (check-equal?
     (g:render a env)
-    "a0 oscils 0.5, k1")
+    (++ "k1 oscils 0.2, 10"
+        "a0 oscils 0.5, k1"
+        "out a0"))
 
   (check-equal?
     (g:render b env)
-    "a1 oscils 0.2, 10"))
+    (++ "a1 oscils 0.2, 10"
+        "out a1")))
 
 
