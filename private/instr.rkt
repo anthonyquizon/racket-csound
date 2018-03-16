@@ -22,7 +22,7 @@
   (define out 
     (~> instr Instr-sig (g:render _ env)))
 
-  (format "instr ~a \n ~a\n endin\n" id out))
+  (format "instr ~a\n~a\nendin\n" id out))
 
 (struct Instr (sig)
   #:methods g:gen:renderable
@@ -44,9 +44,9 @@
     (Env-sigs env)
     (make-immutable-hash `((,sig . 0))))
 
-  ;(check-equal?
-    ;(g:render a env)
-    ;(++ "k1 oscils 0.2, 10"
-        ;"a0 oscils 0.5, k1"
-        ;"out a0"))
-  )
+  (check-equal?
+    (g:render instr env)
+    (++ "instr 0"
+        "a0 oscils 0.5, 100"
+        "out a0"
+        "endin")))

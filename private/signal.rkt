@@ -9,11 +9,28 @@
 (provide Signal
          sine)
 
-(define (render-signal-id sig env type)
-  (define id (hash-ref env sig))
+(struct Signal-Store 
+  (id type rendered children) #:transparent) 
+
+;;TODO replace these with state monad?
+(define (get-id env sig) 
+  (~> (hash-ref env sig) Signal-Store-id))
+
+(define (get-rendered env sig) 
+  (~> (hash-ref env sig) Signal-Store-rendered))
+
+(define (get-type env sig) 
+  (~> (hash-ref env sig) Signal-Store-type))
+
+(define (get-children env sig) 
+  (~> (hash-ref env sig) Signal-Store-children))
+
+(define (id->string env sig)
+  (define id (get-id env sig)) ;;TODO replace these with state monad?
+  (define type (get-type env sig))
   (cond
     [(equal? type 'audio) (format "a~a" id)]
-    [(equal? type 'control) (format "k~a" id)]))
+    [else (format "k~a" id)]))
 
 (define (signal-iterate/fold fn initial sig)
   (define args (Signal-args sig))
@@ -24,33 +41,54 @@
       [else acc])))
 
 (define (signal-parse sig env) 
-  (define (fn env^)
-    (g:iterate/fold signal-parse env^ sig))
+  (define (fn env^) (g:iterate/fold signal-parse env^ sig))
+  (define (id-fn id) (Signal-Store id null null null))
+  (store sig sigs env id-fn fn))
 
-  (store sig sigs env fn))
+(define ((arg->string env) arg)
+  (cond
+    [(Signal? arg) (id->string env arg)]
+    [else (~a arg)]))
 
-;; TODO if adding signals together -> use audio rate
-(define (render-signal-args sig env)
-  (define (f x)
-   (cond
-    [(Signal? x) (render-signal-id x env 'control)]
-    [else (~a x)]))
-  
+(define (args->string env sig)
   (~> (Signal-args sig) 
-      (map f _)
+      (map (arg->string env) _)
       (string-join _ ", ")))
 
-(define (signal-render sig env [type 'audio])
-  (define sig-env (Env-sigs env))
-  (define op (Signal-op sig))
-  (define id (render-signal-id sig sig-env 'audio))
-  (define args (render-signal-args sig sig-env))
+(define ((update-store rendered children) sig-store)
+  (struct-copy Signal-Store sig-store
+               [rendered rendered]
+               [children children]))
 
-  (cond )
+(define (sub-signals sig)
+  (~>> (Signal-args sig)
+       (filter Signal?)))
 
-  (format "~a ~a ~a" id op args)
-  
-  )
+(define (child-signals->rendered-env env children)
+  (for/fold 
+    ([env^ env]) 
+    ([sig children])
+    (signal->rendered-env env^ sig)))
+
+(define (signal->rendered-env env sig)
+  (define str-op (Signal-op sig))
+  (define str-id (id->string env sig))
+  (define str-args (args->string env sig))
+  (define str (format "~a ~a ~a" str-id str-op str-args)) 
+  (define children (sub-signals sig))
+  (define env^ (child-signals->rendered-env env children)) ;;TODO use iterate/fold?
+
+  (hash-update env^ sig (update-store str children)))
+
+(define (rendered-env->string env sig)
+  (define id (id->string env sig))
+  (define rendered (get-rendered env sig))
+  (format "~a\nout ~a" rendered id))
+
+(define (signal-render sig env)
+  (~> (Env-sigs env)  
+      (signal->rendered-env _ sig)
+      (rendered-env->string _ sig)))
 
 (define (sine amp freq)
   (Signal 'oscils `(,amp ,freq)))
@@ -68,12 +106,14 @@
   (require rackunit)
   (define b (sine 0.2 10))
   (define a (sine 0.5 b))
+  (define c (sine 0.3 b))
 
   (define env (g:parse a empty-env))
 
   (check-equal?
     (Env-sigs env)
-    (make-immutable-hash `((,a . 0) (,b . 1))))
+    (hash a (Signal-Store 0 null null null)  
+          b (Signal-Store 1 null null null)))
 
   (check-equal?
     (g:render a env)
@@ -85,5 +125,4 @@
     (g:render b env)
     (++ "a1 oscils 0.2, 10"
         "out a1")))
-
 
