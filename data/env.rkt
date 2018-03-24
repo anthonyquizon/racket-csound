@@ -1,20 +1,15 @@
-#lang racket
+#lang typed/racket
 
 (require racket/format 
          threading
          (for-syntax racket/syntax))
 
 (provide empty-env
-         Env-sigs
-         Env-instrs
          Env
-         Env?
          store)
 
-(struct Env (instrs sigs))
-
-(define empty-env (Env (make-immutable-hash '())
-                       (make-immutable-hash '()))) 
+(define-type Env (HashTable Symbol Any))
+(define empty-env (hash))
 
 (define-syntax (store stx)
   (syntax-case stx ()
@@ -31,3 +26,10 @@
                 [env^ (struct-copy Env env [key val-env^])])
            (fn env^)))]))
 
+(: store (-> Env Symbol) )
+(define (store env key val key-fn fn)
+  (define env^ 
+    (cond 
+      [(hash-ref env key #f) ]
+      ))
+  )

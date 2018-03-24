@@ -1,18 +1,34 @@
-#lang racket
+#lang typed/racket
 
 (require (prefix-in g: "generics.rkt")
          "env.rkt"
-         "util.rkt"
+         "../base/util.rkt"
          racket/match
          threading)
 
-(provide Signal
-         sine)
+(provide Signal)
 
 (struct Signal-Store 
-  (id type rendered children) #:transparent) 
+  ([id : Integer]
+   [rendered : String] 
+   [children : (Listof Signal-Store)]) #:transparent) 
+
+(define-type Signal-Control)
+(define-type Signal-Audio)
+(define-type Signal-Arg (U Signal Real))
+
+(struct Signal ([op : Symbol] [args : (Listof Signal-Arg)])
+  #:methods g:gen:renderable
+  [(define (render sig env) (signal-render sig env))
+   (define (parse sig env) (signal-parse sig env))]
+
+  #:methods g:gen:iterable
+  [(define (iterate/fold fn initial sig) 
+     (signal-iterate/fold fn initial sig))])
+
 
 ;;TODO replace these with state monad?
+(: )
 (define (get-id env sig) 
   (~> (hash-ref env sig) Signal-Store-id))
 
@@ -90,23 +106,12 @@
       (signal->rendered-env _ sig)
       (rendered-env->string _ sig)))
 
-(define (sine amp freq)
-  (Signal 'oscils `(,amp ,freq)))
-
-(struct Signal (op args)
-  #:methods g:gen:renderable
-  [(define (render sig env) (signal-render sig env))
-   (define (parse sig env) (signal-parse sig env))]
-
-  #:methods g:gen:iterable
-  [(define (iterate/fold fn initial sig) 
-     (signal-iterate/fold fn initial sig))])
-
 (module+ test
   (require rackunit)
-  (define b (sine 0.2 10))
-  (define a (sine 0.5 b))
-  (define c (sine 0.3 b))
+
+  (define b (Signal 'oscils 0.2 10))
+  (define a (Signal 'oscils 0.5 b))
+  (define c (Signal 'oscils 0.3 b))
 
   (define env (g:parse a empty-env))
 

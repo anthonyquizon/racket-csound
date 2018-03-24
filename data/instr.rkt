@@ -4,8 +4,7 @@
          (prefix-in s: "signal.rkt")
          "env.rkt"
          "util.rkt"
-         threading
-         )
+         threading)
 
 (provide Instr)
 
@@ -50,3 +49,4 @@
         "a0 oscils 0.5, 100"
         "out a0"
         "endin")))
+
