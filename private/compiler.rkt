@@ -17,12 +17,7 @@
 ;;pass define inst
 ;;pass automatic instr id
 
-;(define-language L1
-  ;(extends L0)
-  ;(terminals 
-    ;(- (Id (i))))
-  ;(Stmt (S)
-    ;(stmt v p a1 ...)))
+;; environment
 
 (define-language L0 
   (entry CSD)
@@ -39,12 +34,58 @@
     (instr id S1 ... (o v)))
   (Event (E)
     (i pv1 pv2 pv3 pv* ...))
-  (Score (Sc)
-    (score E1 ...))
   (CSD (C)
-    (csd I Sc)))
+    I
+    E
+    (csd C1 ...)))
 
-(define-pass pass-csd : L0 (ir) -> * ()
+(define-language L1
+  (extends L0)
+  (Orch (O)
+    (+ (orch I1 ...)))
+  (Score (Sc)
+    (+ (score E1 ...)))
+  (CSD (C)
+    (- I)
+    (- E)
+    (- (csd C1 ...))
+    (+ (csd O Sc))))
+
+;(define-pass : L0 (ir) -> L1 ()
+  ;(Event : Event (E env) -> Event ()
+    ;[(i pv1 pv2 pv3 pv* ...) 
+     
+     ;]
+     ;)
+  ;(CSD (C env)
+       
+       ;)
+  ;(CSD ir '()))
+
+;(module+ test
+   ;(test-case
+     ;"consolidate score events"
+    
+    ;(check-equal?
+      ;(output-csd 
+        ;(parse 
+          ;'(csd
+             ;(instr 1 
+                    ;(stmt aSin oscil 100 200)
+                    ;(out aSin))
+             ;(i 1 0 0)
+             ;(i 1 200 10))
+
+          ;'(csd
+             ;(instr 1 
+                    ;(stmt aSin oscil 100 200) 
+                    ;(out aSin))
+             ;(score 
+               ;(i 1 0 0)
+               ;(i 1 200 10)))))
+      ;'("instr 1 \n aSin oscil 100,200 \n out aSin" . "i 1 0 0 \ni 1 200 10 "))))
+
+(define-pass output-csd : L1 (ir) -> * ()
   (definitions 
     (define (~string-list xs sep)
       (apply string-append 
@@ -57,6 +98,8 @@
       (format "instr ~a \n ~a \n out ~a" id stmts^ v))
     (define (~i pv1 pv2 pv3 pv*)
       (format "i ~a ~a ~a ~a" pv1 pv2 pv3 (~string-list pv* " ")))
+    (define (~orch instrs)
+      (~string-list instrs "\n"))
     (define (~score events)
       (~string-list events "\n"))) 
 
@@ -68,28 +111,32 @@
      (~instr id str-S1 v)])
   (Event : Event (E) -> * ()
     [(i ,pv1 ,pv2 ,pv3 ,pv* ...) (~i pv1 pv2 pv3 pv*)])
+  (Orch : Orch (O) -> * ()
+    [(orch ,I1 ...) 
+     (define str-I1 (map Instr I1))
+     (~orch str-I1)])
   (Score : Score (Sc) -> * ()
     [(score ,E1 ...) 
      (define str-E1 (map Event E1))
      (~score str-E1)])
   (CSD : CSD (C) -> * ()
-    [(csd ,I ,Sc)
-     `(,(Instr I) . ,(Score Sc))])) 
+    [(csd ,O ,Sc)
+     `(,(Orch O) . ,(Score Sc))])) 
 
-(define-parser parse L0)
+(define-parser parse L1)
 
 (module+ test
- 
    (test-case
-     "pass csd"
+     "output csd"
     
     (check-equal?
-      (pass-csd 
+      (output-csd 
         (parse 
           '(csd
-             (instr 1 
-                    (stmt aSin oscil 100 200) 
-                    (out aSin))
+             (orch
+               (instr 1 
+                      (stmt aSin oscil 100 200) 
+                      (out aSin)))
              (score 
                (i 1 0 0)
                (i 1 200 10)))))
