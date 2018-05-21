@@ -80,20 +80,20 @@
 
 (module+ test
  
-   (define ex '(csd
-                 (instr 1 
-                        (stmt aSin oscil 100 200) 
-                        (out aSin))
-                 (score 
-                   (i 1 0 0)
-                   (i 1 200 10))))
-
-   (pass-csd (parse ex)))
-
-   ;(check-equal? 
-     ;(pass-csd 
-       ;(parse ex)
-       ;"instr 1\n aSin")))
+   (test-case
+     "pass csd"
+    
+    (check-equal?
+      (pass-csd 
+        (parse 
+          '(csd
+             (instr 1 
+                    (stmt aSin oscil 100 200) 
+                    (out aSin))
+             (score 
+               (i 1 0 0)
+               (i 1 200 10)))))
+      '("instr 1 \n aSin oscil 100,200 \n out aSin" . "i 1 0 0 \ni 1 200 10 "))))
  
  
 
