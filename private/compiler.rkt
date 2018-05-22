@@ -3,6 +3,8 @@
 (module+ test 
   (require rackunit))
 
+(struct CSound (orc sco) #:transparent)
+
 (define primitives '(oscil))
 
 (define (Primitive? v) (memq v primitives))
@@ -12,12 +14,6 @@
 (define (Argument? v) (number? v))
 (define (Variable? v) ;;TODO control or audio rate 
   (and (symbol? v) (not (Primitive? v)))) 
-
-;;pass define sig
-;;pass define inst
-;;pass automatic instr id
-
-;; environment
 
 (define-language L0 
   (entry CSD)
@@ -32,58 +28,75 @@
     (stmt v p a1 ...))
   (Instr (I)
     (instr id S1 ... (o v)))
-  (Event (E)
+  (Event (Ev)
     (i pv1 pv2 pv3 pv* ...))
-  (CSD (C)
+  (Expr (Ex)
     I
-    E
-    (csd C1 ...)))
+    Ev)
+  (CSD (C)
+    (csd Ex* ...)))
 
 (define-language L1
   (extends L0)
-  (Orch (O)
-    (+ (orch I1 ...)))
-  (Score (Sc)
-    (+ (score E1 ...)))
-  (CSD (C)
+  (Expr (Ex)
     (- I)
-    (- E)
-    (- (csd C1 ...))
-    (+ (csd O Sc))))
+    (- Ev))
+  (Orc (O)
+    (+ (orc I* ...)))
+  (Sco (Sc)
+    (+ (sco Ev* ...)))
+  (CSD (C)
+    (- (csd Ex* ...))
+    (+ (csd O Sc)))) 
 
-;(define-pass : L0 (ir) -> L1 ()
-  ;(Event : Event (E env) -> Event ()
-    ;[(i pv1 pv2 pv3 pv* ...) 
-     
-     ;]
-     ;)
-  ;(CSD (C env)
-       
-       ;)
-  ;(CSD ir '()))
+(define-pass consolidate-orc-and-sco : L0 (ir) -> L1 ()
+  (definitions 
+    (define (Instr? e)
+      (nanopass-case (L0 Instr) e
+        [(instr ,id ,S1 ... (,o ,v)) #t]
+        [else #f]) )
 
-;(module+ test
-   ;(test-case
-     ;"consolidate score events"
-    
-    ;(check-equal?
-      ;(output-csd 
-        ;(parse 
-          ;'(csd
-             ;(instr 1 
-                    ;(stmt aSin oscil 100 200)
-                    ;(out aSin))
-             ;(i 1 0 0)
-             ;(i 1 200 10))
+    (define (Event? e)
+      (nanopass-case (L0 Event) e
+        [(i ,pv1 ,pv2 ,pv3 ,pv* ...) #t]
+        [else #f]) ))
 
-          ;'(csd
-             ;(instr 1 
-                    ;(stmt aSin oscil 100 200) 
-                    ;(out aSin))
-             ;(score 
-               ;(i 1 0 0)
-               ;(i 1 200 10)))))
-      ;'("instr 1 \n aSin oscil 100,200 \n out aSin" . "i 1 0 0 \ni 1 200 10 "))))
+  (Instr : Instr (I) -> Instr ())
+  (Event : Event (Ev) -> Event ())
+  (CSD : CSD (C) -> CSD ()
+     [(csd ,Ex* ...) 
+      (let ([I* (map Instr (filter Instr? Ex*))]
+            [Ev* (map Event (filter Event? Ex*))])
+        `(csd (orc ,I* ...) (sco ,Ev* ...)))]))
+
+(module+ test
+   (test-case
+     "consolidate-orc-and-sco:"
+    (define-parser parse L0)
+    (check-equal?
+      (unparse-L1 
+        (consolidate-orc-and-sco
+          (parse 
+            '(csd
+               (instr 1 
+                      (stmt aSin oscil 100 200)
+                      (out aSin))
+               (i 1 0 0)
+               (instr 2 
+                      (stmt aSin oscil 200 200)
+                      (out aSin))
+               (i 2 200 10)))))
+      '(csd
+         (orc 
+           (instr 1 
+                  (stmt aSin oscil 100 200) 
+                  (out aSin))
+           (instr 2 
+                  (stmt aSin oscil 200 200) 
+                  (out aSin)))
+         (sco 
+           (i 1 0 0)
+           (i 2 200 10))))))
 
 (define-pass output-csd : L1 (ir) -> * ()
   (definitions 
@@ -95,12 +108,13 @@
       (format "~a ~a ~a" var pr (~args args)))
     (define (~instr id stmts v) 
       (define stmts^ (~string-list stmts "\n"))
-      (format "instr ~a \n ~a \n out ~a" id stmts^ v))
+      (format "instr ~a\n ~a\n out ~a" id stmts^ v))
     (define (~i pv1 pv2 pv3 pv*)
-      (format "i ~a ~a ~a ~a" pv1 pv2 pv3 (~string-list pv* " ")))
-    (define (~orch instrs)
+      (string-trim 
+        (format "i ~a ~a ~a ~a" pv1 pv2 pv3 (~string-list pv* " "))))
+    (define (~orc instrs)
       (~string-list instrs "\n"))
-    (define (~score events)
+    (define (~sco events)
       (~string-list events "\n"))) 
 
   (Stmt : Stmt (S) -> * ()
@@ -111,36 +125,36 @@
      (~instr id str-S1 v)])
   (Event : Event (E) -> * ()
     [(i ,pv1 ,pv2 ,pv3 ,pv* ...) (~i pv1 pv2 pv3 pv*)])
-  (Orch : Orch (O) -> * ()
-    [(orch ,I1 ...) 
-     (define str-I1 (map Instr I1))
-     (~orch str-I1)])
-  (Score : Score (Sc) -> * ()
-    [(score ,E1 ...) 
-     (define str-E1 (map Event E1))
-     (~score str-E1)])
+  (Orc : Orc (O) -> * ()
+    [(orc ,I* ...) 
+     (define str-I* (map Instr I*))
+     (~orc str-I*)])
+  (Sco : Sco (Sc) -> * ()
+    [(sco ,Ev* ...) 
+     (define str-Ev* (map Event Ev*))
+     (~sco str-Ev*)])
   (CSD : CSD (C) -> * ()
     [(csd ,O ,Sc)
-     `(,(Orch O) . ,(Score Sc))])) 
-
-(define-parser parse L1)
+     (CSound (Orc O) (Sco Sc))])) 
 
 (module+ test
    (test-case
      "output csd"
-    
+    (define-parser parse L1)
+
     (check-equal?
       (output-csd 
         (parse 
           '(csd
-             (orch
+             (orc
                (instr 1 
                       (stmt aSin oscil 100 200) 
                       (out aSin)))
-             (score 
+             (sco 
                (i 1 0 0)
                (i 1 200 10)))))
-      '("instr 1 \n aSin oscil 100,200 \n out aSin" . "i 1 0 0 \ni 1 200 10 "))))
+      (CSound "instr 1\n aSin oscil 100,200\n out aSin" 
+              "i 1 0 0\ni 1 200 10"))))
  
  
 
