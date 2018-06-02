@@ -19,6 +19,23 @@
 (define (Variable? v) ;;TODO control or audio rate 
   (and (symbol? v) (not (Primitive? v)))) 
 
+
+(define-language LTop0
+  (entry CSD)
+  (terminals 
+   (Primitive (p)))
+  (Stmt (S)
+    (stmt v p a1 ...))
+  (Instr (I)
+    (instr id S1 ... (o v)))
+  (Event (Ev)
+    (i pv1 pv2 pv3 pv* ...))
+  (Expr (Ex)
+    I
+    Ev)
+  (CSD (C)
+    (csd Ex* ...)))
+
 (define-language L0 
   (entry CSD)
   (terminals 

@@ -1,5 +1,5 @@
 #lang info
 (define collection "csound")
-(define deps '("base" "nanopass"))
+(define deps '("base" "nanopass" "charterm"))
 (define version "0.0")
 (define pkg-authors '(anthonyquizon))
